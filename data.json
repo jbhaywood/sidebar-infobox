@@ -1,0 +1,9 @@
+{
+  "imageProperty": "image",
+  "imagesProperty": "images",
+  "excludeProperties": "cssclasses",
+  "maxImageHeight": 0,
+  "sortProperties": true,
+  "capitalizePropertyName": true,
+  "imagePropertyName": "image"
+}

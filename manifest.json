@@ -1,0 +1,11 @@
+{
+	"id": "sidebar-infobox",
+	"name": "Sidebar Infobox",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Displays a table of properties and optional image in the right sidebar. Useful for TTRPGs.",
+	"author": "James Haywood",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}
