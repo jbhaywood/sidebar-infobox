@@ -63,11 +63,12 @@ export class SidebarInfoboxView extends ItemView {
                 excludedProperties.push(imagesPropertyName);
             }
 
-            let values = [...Object.entries(frontmatter)];
+            let flatYaml = this.flattenObject(frontmatter);
+            let properties = [...Object.entries(flatYaml)];
 
             // Sort the properties if needed, based on the settings.
             if (this.plugin.settings.sortProperties) {
-                values.sort((a, b) => a[0].localeCompare(b[0]));
+                properties.sort((a, b) => a[0].localeCompare(b[0]));
             }
 
             // Create the img panel first so that it sits above the properties table.
@@ -83,9 +84,9 @@ export class SidebarInfoboxView extends ItemView {
 
             const body = table.createTBody();
 
-            for (const item of values) {
-                const propName = item[0];
-                const propValue = <any>item[1];
+            for (const property of properties) {
+                const propName = property[0];
+                const propValue = <any>property[1];
 
                 if (propName === imagePropertyName) {
                     // Make sure the main image is always first in the array.
@@ -151,6 +152,90 @@ export class SidebarInfoboxView extends ItemView {
         }
     }
 
+    /*
+    Takes nested yamml like this:
+    ```
+        image: name.jpg
+        nested:
+            - child1:
+                - grandchild1: bobby
+                - grandchild2: alice
+            - child2: greg
+    ```
+        
+    Which comes through in the frontmatter as this:
+    {"image":"name.jpg","nested":[{"child1":[{"grandchild1":"bobby"},{"grandchild2":"alice"}]},{"child2":"greg"}]}
+    
+    And turns it into this:
+    {
+        "image": "name.jpg",
+        "nested.child1.grandchild1": "bobby",
+        "nested.child1.grandchild2": "alice",
+        "nested.child2"" "greg",
+    }
+     */
+    flattenObject(
+        obj: any,
+        parentKey: string = '',
+        result: { [key: string]: any } = {}
+    ): { [key: string]: any } {
+        for (const [key, value] of Object.entries(obj)) {
+            const fullKey = parentKey ? `${parentKey}${this.plugin.settings.nestedYamlSeparator}${key}` : key;
+
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                this.flattenObject(value, fullKey, result);
+            } else if (Array.isArray(value)) {
+                value.forEach((val) => {
+                    if (typeof val === 'object') {
+                        this.flattenObject(val, fullKey, result);
+                    } else {
+                        result[fullKey] = val;
+                    }
+                });
+            } else {
+                result[fullKey] = value;
+            }
+        }
+        return result;
+    }
+
+    // This sets values on nested yaml objects.
+    updateFrontmatter(obj: any, path: string, value: string): any {
+        const keys = path.split(this.plugin.settings.nestedYamlSeparator);
+        let current = obj;
+        for (let i = 0; i < keys.length - 1; i++) {
+            // Assuming keys represent an array index if it is purely numeric
+            const key = isNaN(+keys[i]) ? keys[i] : parseInt(keys[i], 10);
+            if (key in current) {
+                if (Array.isArray(current[key])) {
+                    // The next key should be an index if we are looking at an array
+                    const nextKey = isNaN(+keys[i + 1]) ? keys[i + 1] : parseInt(keys[i + 1], 10);
+                    current = current[key].find(item => nextKey in item);
+                } else {
+                    current = current[key];
+                }
+            } else {
+                console.error('Invalid path');
+                return obj;
+            }
+        }
+
+        if (Array.isArray(current)) {
+            const lastKeyIndex = isNaN(+keys[keys.length - 1]) ? keys[keys.length - 1] : parseInt(keys[keys.length - 1], 10);
+            let foundIndex = current.findIndex(item => lastKeyIndex in item);
+            if (foundIndex !== -1) {
+                current[foundIndex][lastKeyIndex] = value;
+            }
+
+        } else {
+            // Set the value at the last key
+            const lastKey = keys[keys.length - 1];
+            current[lastKey] = value;
+        }
+
+        return obj;
+    }
+
     isUrl(str: string) {
         return /^(https?:\/\/).+/i.exec(str);
     }
@@ -198,7 +283,9 @@ export class SidebarInfoboxView extends ItemView {
                         // Handle typing into the div.
                         if (mutation.type === "characterData") {
                             this.app.fileManager.processFrontMatter(activeFile, (fm: FrontMatterCache) => {
-                                fm[propName] = mutation.target.textContent;
+                                if (mutation.target.textContent) {
+                                    this.updateFrontmatter(fm, propName, mutation.target.textContent);
+                                }
                             });
                         }
 

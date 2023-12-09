@@ -9,9 +9,10 @@ export interface SidebarInfoboxSettings {
     imageProperty: string,
     imagesProperty: string,
     excludeProperties: string,
-    maxImageHeight: Number;
-    sortProperties: boolean;
-    capitalizePropertyName: boolean;
+    maxImageHeight: Number,
+    sortProperties: boolean,
+    capitalizePropertyName: boolean,
+    nestedYamlSeparator: string
 }
 
 export const DEFAULT_SETTINGS: SidebarInfoboxSettings = {
@@ -20,7 +21,8 @@ export const DEFAULT_SETTINGS: SidebarInfoboxSettings = {
     excludeProperties: "",
     maxImageHeight: 500,
     sortProperties: false,
-    capitalizePropertyName: false
+    capitalizePropertyName: false,
+    nestedYamlSeparator: "."
 }
 
 export class SidebarInfoboxSettingTab extends PluginSettingTab {
@@ -54,7 +56,7 @@ export class SidebarInfoboxSettingTab extends PluginSettingTab {
                 .setPlaceholder(DEFAULT_SETTINGS.imageProperty)
                 .setValue(this.plugin.settings.imageProperty)
                 .onChange(async (value) => {
-                    this.plugin.settings.imageProperty = value;
+                    this.plugin.settings.imageProperty = value || DEFAULT_SETTINGS.imageProperty;
                     await this.plugin.saveSettings();
                 }));
 
@@ -65,7 +67,7 @@ export class SidebarInfoboxSettingTab extends PluginSettingTab {
                 .setPlaceholder(DEFAULT_SETTINGS.imagesProperty)
                 .setValue(this.plugin.settings.imagesProperty)
                 .onChange(async (value) => {
-                    this.plugin.settings.imagesProperty = value;
+                    this.plugin.settings.imagesProperty = value || DEFAULT_SETTINGS.imagesProperty;
                     await this.plugin.saveSettings();
                 }));
 
@@ -96,6 +98,17 @@ export class SidebarInfoboxSettingTab extends PluginSettingTab {
                 .setValue(this.plugin.settings.capitalizePropertyName)
                 .onChange(async (value) => {
                     this.plugin.settings.capitalizePropertyName = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
+            .setName("Nested YAML Separator")
+            .setDesc("The character to use when displaying nested YAML properties. Must be a character that isn't used in property names.")
+            .addText(text => text
+                .setPlaceholder(DEFAULT_SETTINGS.nestedYamlSeparator)
+                .setValue(this.plugin.settings.nestedYamlSeparator)
+                .onChange(async (value) => {
+                    this.plugin.settings.nestedYamlSeparator = value || DEFAULT_SETTINGS.nestedYamlSeparator;
                     await this.plugin.saveSettings();
                 }));
     }
